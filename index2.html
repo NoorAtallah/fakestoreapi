@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        #postForm{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .post-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        
+    </style>
+</head>
+<body>
+    <form id="postForm">
+        <input type="text" id="postTitle" placeholder="Enter post title" required>
+        <textarea id="postContent" placeholder="Enter post content" required></textarea>
+        <button type="submit">Create Post</button>
+    </form>
+    
+    <div id="postsContainer"></div>
+    
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+        import { getDatabase, ref, push, set, get, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAEJ4CtDto9OdzBCbj48mmZpIfUqohb0Jw",
+            authDomain: "fakestoreapi-63849.firebaseapp.com",
+            databaseURL: "https://fakestoreapi-63849-default-rtdb.firebaseio.com/",
+            projectId: "fakestoreapi-63849",
+            storageBucket: "fakestoreapi-63849.appspot.com",
+            messagingSenderId: "273598003885",
+            appId: "1:273598003885:web:33fde2d2cf8592c8ce6424",
+            measurementId: "G-6YTK1WG72E"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const database = getDatabase(app);
+        const dbRef = ref(database, 'posts');
+
+        const postForm = document.getElementById('postForm');
+        const postsContainer = document.getElementById('postsContainer');
+
+        postForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const postTitle = document.getElementById('postTitle').value;
+            const postContent = document.getElementById('postContent').value;
+
+            const newPostRef = push(dbRef);
+            set(newPostRef, {
+                title: postTitle,
+                content: postContent
+            }).then(() => {
+                postForm.reset();
+                displayPosts();
+            }).catch((error) => {
+                console.error("Error adding document: ", error);
+            });
+        });
+
+        function displayPosts() {
+            onValue(dbRef, (snapshot) => {
+                postsContainer.innerHTML = '';
+                snapshot.forEach((childSnapshot) => {
+                    const postId = childSnapshot.key;
+                    const post = childSnapshot.val();
+                    const postCard = document.createElement('div');
+                    postCard.classList.add('post-card');
+                    postCard.innerHTML = `
+                        <h3>${post.title}</h3>
+                        <p>${post.content}</p>
+                        <button onclick="deletePost('${postId}')">Delete</button>
+                        <button onclick="showUpdateForm('${postId}', '${post.title}', '${post.content}')">Update</button>
+                    `;
+                    postsContainer.appendChild(postCard);
+                });
+            });
+        }
+
+        window.deletePost = (id) => {
+            const postRef = ref(database, 'posts/' + id);
+            remove(postRef).then(() => {
+                displayPosts();
+            }).catch((error) => {
+                console.error("Error deleting document: ", error);
+            });
+        };
+
+        window.showUpdateForm = (id, title, content) => {
+            const postForm = document.getElementById('postForm');
+            postForm.innerHTML = `
+                <input type="text" id="postTitle" value="${title}" required>
+                <textarea id="postContent" required>${content}</textarea>
+                <button type="submit">Update</button>
+                <button type="button" onclick="cancelUpdate()">Cancel</button>
+            `;
+            postForm.onsubmit = (e) => {
+                e.preventDefault();
+                const updatedTitle = document.getElementById('postTitle').value;
+                const updatedContent = document.getElementById('postContent').value;
+
+                const postRef = ref(database, 'posts/' + id);
+                update(postRef, {
+                    title: updatedTitle,
+                    content: updatedContent
+                }).then(() => {
+                    postForm.reset();
+                    postForm.innerHTML = `
+                        <input type="text" id="postTitle" placeholder="Enter post title" required>
+                        <textarea id="postContent" placeholder="Enter post content" required></textarea>
+                        <button type="submit">Create Post</button>
+                    `;
+                    postForm.onsubmit = addPost;
+                    displayPosts();
+                }).catch((error) => {
+                    console.error("Error updating document: ", error);
+                });
+            };
+        };
+
+        function cancelUpdate() {
+            const postForm = document.getElementById('postForm');
+            postForm.reset();
+            postForm.innerHTML = `
+                <input type="text" id="postTitle" placeholder="Enter post title" required>
+                <textarea id="postContent" placeholder="Enter post content" required></textarea>
+                <button type="submit">Create Post</button>
+            `;
+            postForm.onsubmit = addPost;
+        }
+
+        const addPost = (e) => {
+            e.preventDefault();
+            const postTitle = document.getElementById('postTitle').value;
+            const postContent = document.getElementById('postContent').value;
+
+            const newPostRef = push(dbRef);
+            set(newPostRef, {
+                title: postTitle,
+                content: postContent
+            }).then(() => {
+                postForm.reset();
+                displayPosts();
+            }).catch((error) => {
+                console.error("Error adding document: ", error);
+            });
+        };
+
+        postForm.onsubmit = addPost;
+        displayPosts();
+    </script>
+</body>
+</html>
